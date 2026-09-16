@@ -1,0 +1,81 @@
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+
+from . import __version__
+from .codex import ProbeSetupError, probe_codex
+from .model import ProbeReport
+
+
+def render_text(report: ProbeReport) -> str:
+    lines = [
+        f"Agent Hook Probe {report.probe_version}",
+        f"Runtime: {report.runtime_version}",
+        f"Mode:    {report.mode}",
+        "",
+    ]
+    for check in report.checks:
+        detail = f" — {check.detail}" if check.detail else ""
+        result = (
+            f"{check.status:4}  {check.name:24} expected {check.expected}, "
+            f"observed {check.observed}{detail}"
+        )
+        lines.append(result)
+    lines.extend(("", f"Result: {report.result}"))
+    if report.fixture_path:
+        lines.append(f"Fixture kept at: {report.fixture_path}")
+    return "\n".join(lines)
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="agent-hook-probe",
+        description="Verify that coding-agent lifecycle hooks actually fire.",
+    )
+    parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
+    subparsers = parser.add_subparsers(dest="provider")
+    codex = subparsers.add_parser("codex", help="probe Codex CLI hooks with a disposable fixture")
+    codex.add_argument("--json", action="store_true", help="emit a privacy-minimized JSON report")
+    codex.add_argument("--model", help="override the model used for the one minimal probe turn")
+    codex.add_argument("--timeout", type=int, default=180, help="Codex turn timeout in seconds")
+    codex.add_argument(
+        "--keep-fixture",
+        action="store_true",
+        help="keep raw disposable hook records",
+    )
+    codex.add_argument("--codex", dest="codex_executable", help="path to a Codex CLI executable")
+    return parser
+
+
+def _error(message: str, json_output: bool) -> int:
+    if json_output:
+        print(json.dumps({"result": "ERROR", "error": message}, indent=2))
+    else:
+        print(f"Agent Hook Probe: ERROR: {message}", file=sys.stderr)
+    return 2
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = build_parser()
+    args = parser.parse_args(argv)
+    if args.provider != "codex":
+        parser.print_help()
+        return 2
+    if args.timeout < 1:
+        return _error("--timeout must be at least 1 second", args.json)
+    try:
+        report = probe_codex(
+            codex_executable=args.codex_executable,
+            model=args.model,
+            timeout=args.timeout,
+            keep_fixture=args.keep_fixture,
+        )
+    except ProbeSetupError as exc:
+        return _error(str(exc), args.json)
+    if args.json:
+        print(json.dumps(report.to_dict(), indent=2))
+    else:
+        print(render_text(report))
+    return 0 if report.result == "PASS" else 1

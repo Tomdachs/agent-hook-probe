@@ -1,0 +1,25 @@
+name: Bug report
+description: Report an Agent Hook Probe failure or incorrect result
+title: "[bug] "
+body:
+  - type: markdown
+    attributes:
+      value: "Please share the privacy-minimized report, not raw credentials or unreviewed hook payloads."
+  - type: textarea
+    id: report
+    attributes:
+      label: Probe report
+      description: Output from `agent-hook-probe codex --json`
+      render: json
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Additional context

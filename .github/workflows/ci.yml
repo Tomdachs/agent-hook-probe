@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: Python ${{ matrix.python-version }} / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {os: ubuntu-latest, python-version: '3.11'}
+          - {os: ubuntu-latest, python-version: '3.12'}
+          - {os: ubuntu-latest, python-version: '3.13'}
+          - {os: ubuntu-latest, python-version: '3.14'}
+          - {os: windows-latest, python-version: '3.11'}
+          - {os: windows-latest, python-version: '3.14'}
+          - {os: macos-latest, python-version: '3.11'}
+          - {os: macos-latest, python-version: '3.14'}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: '0.12.5'
+          enable-cache: true
+      - run: uv python install ${{ matrix.python-version }}
+      - run: uv sync --frozen --python ${{ matrix.python-version }}
+      - run: uv run --python ${{ matrix.python-version }} ruff check .
+      - run: uv run --python ${{ matrix.python-version }} ruff format --check .
+      - run: uv run --python ${{ matrix.python-version }} pytest
+
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: '0.12.5'
+      - run: uv sync --frozen
+      - run: uv build
+      - name: Install wheel in a clean environment
+        run: |
+          uv venv /tmp/ahp-wheel
+          uv pip install --python /tmp/ahp-wheel/bin/python dist/*.whl
+          /tmp/ahp-wheel/bin/agent-hook-probe --version

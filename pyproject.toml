@@ -1,0 +1,51 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "agent-hook-probe"
+version = "0.1.0"
+description = "Verify that coding-agent lifecycle hooks actually fire."
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+authors = [{ name = "Tomdachs" }]
+keywords = ["codex", "hooks", "coding-agent", "testing", "developer-tools"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Topic :: Software Development :: Testing",
+]
+dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/Tomdachs/agent-hook-probe"
+Repository = "https://github.com/Tomdachs/agent-hook-probe"
+Issues = "https://github.com/Tomdachs/agent-hook-probe/issues"
+
+[project.scripts]
+agent-hook-probe = "agent_hook_probe.cli:main"
+
+[dependency-groups]
+dev = ["pytest>=8.4,<10", "ruff>=0.13,<0.17"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/agent_hook_probe"]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
