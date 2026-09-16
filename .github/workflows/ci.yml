@@ -50,3 +50,27 @@ jobs:
           uv venv /tmp/ahp-wheel
           uv pip install --python /tmp/ahp-wheel/bin/python dist/*.whl
           /tmp/ahp-wheel/bin/agent-hook-probe --version
+
+  action-smoke:
+    name: Composite action / offline diff
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Unchanged snapshot passes
+        uses: ./
+        with:
+          operation: diff
+          baseline: tests/fixtures/action/baseline.json
+          current: tests/fixtures/action/current.json
+      - name: Regression snapshot fails
+        id: regression
+        continue-on-error: true
+        uses: ./
+        with:
+          operation: diff
+          baseline: tests/fixtures/action/baseline.json
+          current: tests/fixtures/action/regression.json
+      - name: Assert regression failure
+        env:
+          REGRESSION_OUTCOME: ${{ steps.regression.outcome }}
+        run: test "$REGRESSION_OUTCOME" = "failure"

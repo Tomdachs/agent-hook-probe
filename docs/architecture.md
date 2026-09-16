@@ -58,3 +58,9 @@ The public report includes provider/version, execution surface, check names, exp
 Provider adapters still produce the same `ProbeReport`. Snapshot handling sits after that boundary: it removes any retained `fixture_path`, adds a UTC capture timestamp, and writes schema-versioned JSON only when requested. Comparison operates entirely on normalized snapshots, so offline `diff` never launches a provider or reads hook payloads.
 
 The diff engine keys checks by stable check name. Runtime-version changes are metadata; PASS-to-FAIL and removed checks are regressions, while added checks and changed expectations are contract drift. This keeps provider execution concerns separate from historical comparison.
+
+## GitHub Action flow
+
+The composite action is a thin transport layer over the same CLI. It pins `setup-uv`, validates Action inputs in a standard-library Python helper, and invokes the package from the checked-out action source with `uvx --from`. It does not duplicate provider contracts or diff logic.
+
+Offline `diff` never invokes a provider. Live `probe` expects the caller to have selected, installed, and authenticated the provider CLI before the Action step. Action inputs are converted to a subprocess argument array without `eval` or shell command construction.

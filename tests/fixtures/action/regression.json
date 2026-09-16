@@ -1,0 +1,22 @@
+{
+  "snapshot_schema_version": "1",
+  "captured_at": "2026-09-16T01:00:00Z",
+  "report": {
+    "schema_version": "1",
+    "probe_version": "0.5.0",
+    "provider": "codex",
+    "runtime_version": "codex-cli 0.155.0",
+    "mode": "exec",
+    "checks": [
+      {
+        "name": "Stop",
+        "status": "FAIL",
+        "expected": "1",
+        "observed": "0",
+        "detail": ""
+      }
+    ],
+    "result": "FAIL",
+    "duration_ms": 1
+  }
+}

@@ -10,9 +10,9 @@ Agent Hook Probe runs disposable workspaces against real coding-agent runtimes a
 
 | Provider | Surface | Probe canary | Status |
 | --- | --- | --- | --- |
-| Codex CLI | `codex exec` | one sandboxed shell write | `v0.4.0`; live-verified on Codex CLI 0.154.0 |
-| Codex CLI | interactive TUI | one sandboxed shell write | `v0.4.0`; live-verified on WSL with Codex CLI 0.154.0 |
-| Antigravity CLI | headless `agy -p` | one workspace `view_file` | `v0.4.0`; live-verified on Antigravity CLI 1.2.4 |
+| Codex CLI | `codex exec` | one sandboxed shell write | Supported; last full live verification: Codex CLI 0.154.0 |
+| Codex CLI | interactive TUI | one sandboxed shell write | Supported on Linux/WSL/macOS; last full live verification: Codex CLI 0.154.0 |
+| Antigravity CLI | headless `agy -p` | one workspace `view_file` | Live-verified on Antigravity CLI 1.2.4 |
 | Claude Code | — | — | Planned |
 
 The Codex TUI probe is currently supported on Linux, WSL, and macOS. Windows can still use the Codex `exec` probe.
@@ -22,25 +22,25 @@ The Codex TUI probe is currently supported on Linux, WSL, and macOS. Windows can
 Python 3.11+, Git, the target provider CLI, and an authenticated provider session are required. Each probe performs one minimal model turn, so normal provider usage applies.
 
 ```bash
-uvx --from https://github.com/Tomdachs/agent-hook-probe/releases/download/v0.4.0/agent_hook_probe-0.4.0-py3-none-any.whl agent-hook-probe codex
+uvx --from https://github.com/Tomdachs/agent-hook-probe/releases/download/v0.5.0/agent_hook_probe-0.5.0-py3-none-any.whl agent-hook-probe codex
 ```
 
 Probe the interactive Codex TUI instead of `exec`:
 
 ```bash
-uvx --from https://github.com/Tomdachs/agent-hook-probe/releases/download/v0.4.0/agent_hook_probe-0.4.0-py3-none-any.whl agent-hook-probe codex --surface tui
+uvx --from https://github.com/Tomdachs/agent-hook-probe/releases/download/v0.5.0/agent_hook_probe-0.5.0-py3-none-any.whl agent-hook-probe codex --surface tui
 ```
 
 Probe Antigravity with the same release wheel:
 
 ```bash
-uvx --from https://github.com/Tomdachs/agent-hook-probe/releases/download/v0.4.0/agent_hook_probe-0.4.0-py3-none-any.whl agent-hook-probe antigravity
+uvx --from https://github.com/Tomdachs/agent-hook-probe/releases/download/v0.5.0/agent_hook_probe-0.5.0-py3-none-any.whl agent-hook-probe antigravity
 ```
 
 Typical Codex result:
 
 ```text
-Agent Hook Probe 0.4.0
+Agent Hook Probe 0.5.0
 Runtime: codex-cli 0.154.0
 Mode:    tui
 
@@ -89,6 +89,20 @@ The comparison treats a runtime-version change by itself as informational. `PASS
 
 Snapshot files contain the normalized public report plus capture time. They never contain raw hook payloads or retained fixture paths. Existing snapshot files are not overwritten unless `--overwrite-snapshot` is explicitly supplied.
 
+## GitHub Action
+
+Use the bundled composite action for an offline regression gate without provider credentials or model usage:
+
+```yaml
+- uses: Tomdachs/agent-hook-probe@v0.5.0
+  with:
+    operation: diff
+    baseline: .github/agent-hook-probe/codex-exec-baseline.json
+    current: artifacts/codex-exec-current.json
+```
+
+Live `operation: probe` is also supported, but the action deliberately does not install, upgrade, or authenticate Codex or Antigravity. Prepare a pinned provider CLI and supported authentication in earlier workflow steps or use a pre-authenticated runner. See [docs/github-action.md](docs/github-action.md).
+
 ## Antigravity adapter
 
 Antigravity CLI documents workspace hooks in `.agents/hooks.json` and headless execution with `agy -p`. The adapter uses a read-only `view_file` canary and does **not** enable `--dangerously-skip-permissions`.
@@ -115,7 +129,7 @@ For Antigravity, the probe writes `.agents/hooks.json` plus a probe-owned canary
 
 Use `--keep-fixture` only when you intentionally need raw disposable records for debugging. Retained fixtures can contain provider-supplied session identifiers and transcript paths.
 
-See [docs/safety.md](docs/safety.md), [docs/codex-contract.md](docs/codex-contract.md), [docs/antigravity-contract.md](docs/antigravity-contract.md), and [docs/regression-snapshots.md](docs/regression-snapshots.md).
+See [docs/safety.md](docs/safety.md), [docs/codex-contract.md](docs/codex-contract.md), [docs/antigravity-contract.md](docs/antigravity-contract.md), and [docs/regression-snapshots.md](docs/regression-snapshots.md), and [docs/github-action.md](docs/github-action.md).
 
 ## JSON and CI
 

@@ -35,10 +35,17 @@ Agent Hook Probe should grow by adding evidence-backed lifecycle contracts, not 
 - Runtime-version changes are informational rather than failures by themselves.
 - Snapshot overwrite protection and provider/surface compatibility checks.
 
+## v0.5 — released
+
+- Composite GitHub Action for offline snapshot diff and live provider probes.
+- Provider installation and authentication remain caller-controlled.
+- Action inputs are validated and passed as argument arrays without shell evaluation.
+- CI self-tests the action for both unchanged and regression snapshots.
+- Raw fixture retention is intentionally not exposed by the Action.
+
 ## Next candidates
 
 - Claude Code adapter after defining a similarly isolated, deterministic fixture.
-- GitHub Action wrapper once provider authentication and usage expectations can be made explicit.
 
 ## Out of scope
 

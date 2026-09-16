@@ -35,3 +35,9 @@ The probe does not inspect auth files, environment secret values, browser state,
 Saved regression snapshots contain only the same normalized public report that the CLI can emit, plus a UTC capture timestamp. `fixture_path` is stripped even when `--keep-fixture` was used for the live probe. Raw hook payloads, model prompts, provider stdout/stderr, transcript paths, and credentials are never copied into snapshots.
 
 Snapshot output is written only when the user supplies `--save-snapshot`. Existing files are protected from accidental replacement unless `--overwrite-snapshot` is also supplied. Baseline comparison reads only the selected snapshot JSON files and does not inspect provider configuration or project files.
+
+## GitHub Action boundary
+
+The GitHub Action has no credential inputs and does not install or authenticate provider CLIs. Authentication is intentionally left to an earlier caller-controlled step or a pre-authenticated runner. This prevents the Action from becoming a generic secret-transport layer.
+
+The Action does not expose `--keep-fixture`; only privacy-minimized snapshots can be written through its inputs. Snapshot upload is also caller-controlled rather than automatic. The helper validates enumerated and boolean inputs, then launches Agent Hook Probe with an argument array rather than shell evaluation.

@@ -21,6 +21,24 @@ jobs:
       - run: uv run ruff check .
       - run: uv run ruff format --check .
       - run: uv run pytest
+      - name: Verify composite action unchanged path
+        uses: ./
+        with:
+          operation: diff
+          baseline: tests/fixtures/action/baseline.json
+          current: tests/fixtures/action/current.json
+      - name: Verify composite action regression path
+        id: release-regression
+        continue-on-error: true
+        uses: ./
+        with:
+          operation: diff
+          baseline: tests/fixtures/action/baseline.json
+          current: tests/fixtures/action/regression.json
+      - name: Assert composite action regression failure
+        env:
+          REGRESSION_OUTCOME: ${{ steps.release-regression.outcome }}
+        run: test "$REGRESSION_OUTCOME" = "failure"
       - run: uv build
       - name: Verify tag matches package version
         run: |
