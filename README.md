@@ -13,7 +13,7 @@ Agent Hook Probe runs disposable workspaces against real coding-agent runtimes a
 | Codex CLI | `codex exec` | one sandboxed shell write | Supported; last full live verification: Codex CLI 0.154.0 |
 | Codex CLI | interactive TUI | one sandboxed shell write | Supported on Linux/WSL/macOS; last full live verification: Codex CLI 0.154.0 |
 | Antigravity CLI | headless `agy -p` | one workspace `view_file` | Live-verified on Antigravity CLI 1.2.4 |
-| Claude Code | — | — | Planned |
+| Claude Code | headless `claude -p` | one workspace `Read` | v0.6 candidate; full live verification pending sign-in |
 
 The Codex TUI probe is currently supported on Linux, WSL, and macOS. Windows can still use the Codex `exec` probe.
 
@@ -35,6 +35,12 @@ Probe Antigravity with the same release wheel:
 
 ```bash
 uvx --from https://github.com/Tomdachs/agent-hook-probe/releases/download/v0.5.0/agent_hook_probe-0.5.0-py3-none-any.whl agent-hook-probe antigravity
+```
+
+The v0.6 candidate also adds Claude Code headless probing from a source checkout:
+
+```bash
+uv run agent-hook-probe claude
 ```
 
 Typical Codex result:
@@ -119,6 +125,14 @@ The Antigravity probe checks:
 
 If Antigravity is installed but not signed in, the command exits with setup error code `2`. It does not misreport authentication failure as a hook regression.
 
+## Claude Code adapter
+
+The Claude adapter uses headless `claude -p` with an explicit fixture-owned settings file. It runs in `--restricted` mode, exposes only the built-in `Read` tool, denies MCP tools, disables session persistence, and uses `dontAsk` rather than bypass permissions. The canary file is pre-created and only read.
+
+It checks exactly one SessionStart, UserPromptSubmit, target Read PreToolUse/PostToolUse pair, Stop, and SessionEnd; matches the Read pair by `tool_use_id`; validates common payload fields and lifecycle order; and confirms the canary remained intact. Normal user/project/local Claude settings are not loaded. Managed policy still applies and is not bypassed.
+
+If Claude Code is not authenticated, the command exits with setup error code `2` and points to `claude auth login`. See [docs/claude-contract.md](docs/claude-contract.md).
+
 ## Safety model
 
 Every provider probe owns a newly created temporary Git repository and deletes it by default. The public report never includes raw hook payloads, prompts, transcript paths, absolute workspace paths, credentials, or provider stdout/stderr.
@@ -127,9 +141,11 @@ For Codex, hooks are injected through per-invocation config. Codex's hook-trust 
 
 For Antigravity, the probe writes `.agents/hooks.json` plus a probe-owned canary only inside its disposable repository, explicitly adds that directory as the active workspace, and asks `view_file` to read the canary. It enables Antigravity's terminal sandbox and does not edit global Antigravity settings, hooks, permissions, or existing projects.
 
+For Claude Code, the probe passes a fixture-owned settings file explicitly under restricted mode, exposes only `Read`, denies MCP tools, disables permission prompts and session persistence, and never uses the dangerous permission bypass.
+
 Use `--keep-fixture` only when you intentionally need raw disposable records for debugging. Retained fixtures can contain provider-supplied session identifiers and transcript paths.
 
-See [docs/safety.md](docs/safety.md), [docs/codex-contract.md](docs/codex-contract.md), [docs/antigravity-contract.md](docs/antigravity-contract.md), and [docs/regression-snapshots.md](docs/regression-snapshots.md), and [docs/github-action.md](docs/github-action.md).
+See [docs/safety.md](docs/safety.md), [docs/codex-contract.md](docs/codex-contract.md), [docs/antigravity-contract.md](docs/antigravity-contract.md), [docs/claude-contract.md](docs/claude-contract.md), [docs/regression-snapshots.md](docs/regression-snapshots.md), and [docs/github-action.md](docs/github-action.md).
 
 ## JSON and CI
 
@@ -137,6 +153,7 @@ See [docs/safety.md](docs/safety.md), [docs/codex-contract.md](docs/codex-contra
 agent-hook-probe codex --json
 agent-hook-probe codex --surface tui --json
 agent-hook-probe antigravity --json
+agent-hook-probe claude --json
 ```
 
 Exit codes:
@@ -148,11 +165,12 @@ CI unit tests do not call a model. Live provider probes remain separate because 
 
 ## Options
 
-Both provider commands support `--model`, `--timeout`, `--keep-fixture`, `--json`, `--save-snapshot`, `--baseline`, and `--overwrite-snapshot`. You can point at a specific executable with `--codex` or `--agy`. Codex additionally supports `--surface exec|tui`.
+Both provider commands support `--model`, `--timeout`, `--keep-fixture`, `--json`, `--save-snapshot`, `--baseline`, and `--overwrite-snapshot`. You can point at a specific executable with `--codex`, `--agy`, or `--claude`. Codex additionally supports `--surface exec|tui`.
 
 ```bash
 agent-hook-probe codex --surface tui --timeout 120
 agent-hook-probe antigravity --model <model> --timeout 120
+agent-hook-probe claude --model sonnet --timeout 120
 ```
 
 ## Why a live probe?
@@ -165,6 +183,9 @@ Provider references:
 - Antigravity hooks: https://antigravity.google/docs/hooks
 - Antigravity headless mode: https://antigravity.google/docs/cli/headless/
 - Antigravity permissions: https://antigravity.google/docs/cli/permissions
+- Claude Code hooks: https://code.claude.com/docs/en/hooks
+- Claude Code CLI: https://code.claude.com/docs/en/cli-reference
+- Claude Code permissions: https://code.claude.com/docs/en/permissions
 
 ## Development
 

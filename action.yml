@@ -8,7 +8,7 @@ inputs:
     required: false
     default: probe
   provider:
-    description: "Provider for probe mode: codex or antigravity"
+    description: "Provider for probe mode: codex, antigravity, or claude"
     required: false
     default: codex
   surface:

@@ -43,6 +43,20 @@ The TUI probe is currently POSIX-only because it relies on the standard pseudo-t
 
 The Antigravity adapter does not modify global Antigravity settings or hooks. Project-local hook discovery is exercised because that is part of the runtime contract being tested.
 
+## Claude Code flow
+
+1. Resolve `claude` and read its version.
+2. Create a temporary Git repository, a pre-existing read-only canary, and an explicit probe settings file.
+3. Configure SessionStart, UserPromptSubmit, Read Pre/PostToolUse, Stop, and SessionEnd command hooks to call the recorder.
+4. Launch `claude -p` in restricted mode with only the `Read` built-in tool exposed and MCP tools denied.
+5. Disable session persistence and permission prompts; use `dontAsk` rather than a permission bypass.
+6. Ask Claude to read the canary exactly once.
+7. Parse only provider completion/setup state from JSON output, then analyze the probe-owned hook records.
+8. Verify exact lifecycle counts, Read pairing by `tool_use_id`, common fields, ordering, and unchanged canary content.
+9. Delete the fixture unless debugging was explicitly requested.
+
+Claude's normal user/project/local settings are not loaded in restricted mode. Managed policy remains in force and is intentionally not bypassed.
+
 ## Recorder protocol
 
 The recorder stores each stdin payload as one JSON record in a probe-owned directory. Codex handlers use the generic empty response. Antigravity handlers return only the minimal protocol response required by the event.

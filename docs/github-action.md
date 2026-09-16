@@ -30,7 +30,7 @@ Live mode deliberately does not install, upgrade, or authenticate a provider CLI
     save_snapshot: artifacts/codex-exec-current.json
 ```
 
-For Antigravity set `provider: antigravity`; `surface` is Codex-only. `model` and `timeout` are optional. Set `json: true` when machine-readable logs are useful.
+For Antigravity set `provider: antigravity`; for Claude Code set `provider: claude`. `surface` is Codex-only. `model` and `timeout` are optional. Set `json: true` when machine-readable logs are useful.
 
 ## Authentication boundary
 

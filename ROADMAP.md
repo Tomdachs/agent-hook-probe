@@ -43,9 +43,18 @@ Agent Hook Probe should grow by adding evidence-backed lifecycle contracts, not 
 - CI self-tests the action for both unchanged and regression snapshots.
 - Raw fixture retention is intentionally not exposed by the Action.
 
+## v0.6 — candidate
+
+- Claude Code headless adapter with a read-only `Read` canary.
+- Restricted-mode execution with explicit probe settings and no normal user/project/local settings.
+- SessionStart / UserPromptSubmit / PreToolUse / PostToolUse / Stop / SessionEnd lifecycle checks.
+- Tool pairing by `tool_use_id`, lifecycle-order validation, snapshot support, and GitHub Action support.
+- No Bash/Edit/Write exposure, no permission bypass, and no session persistence.
+- Full live provider verification pending one-time Claude Code sign-in on the release test host.
+
 ## Next candidates
 
-- Claude Code adapter after defining a similarly isolated, deterministic fixture.
+- Broaden provider-version fixtures and external adoption examples after Claude v0.6 release.
 
 ## Out of scope
 

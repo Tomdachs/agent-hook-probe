@@ -7,6 +7,7 @@ from pathlib import Path
 
 from . import __version__
 from .antigravity import AntigravityProbeSetupError, probe_antigravity
+from .claude import ClaudeProbeSetupError, probe_claude
 from .codex import ProbeSetupError, probe_codex, probe_codex_tui
 from .model import ProbeReport
 from .snapshot import (
@@ -119,6 +120,24 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_snapshot_options(antigravity)
 
+    claude = subparsers.add_parser(
+        "claude", help="probe Claude Code hooks with a disposable fixture"
+    )
+    claude.add_argument("--json", action="store_true", help="emit a privacy-minimized JSON report")
+    claude.add_argument("--model", help="override the model used for the minimal probe turn")
+    claude.add_argument(
+        "--timeout", type=int, default=180, help="Claude Code turn timeout in seconds"
+    )
+    claude.add_argument(
+        "--keep-fixture",
+        action="store_true",
+        help="keep raw disposable hook records",
+    )
+    claude.add_argument(
+        "--claude", dest="claude_executable", help="path to a Claude Code executable"
+    )
+    _add_snapshot_options(claude)
+
     diff = subparsers.add_parser("diff", help="compare two saved regression snapshots")
     diff.add_argument("baseline", type=Path, help="baseline snapshot JSON")
     diff.add_argument("current", type=Path, help="current snapshot JSON")
@@ -151,7 +170,7 @@ def main(argv: list[str] | None = None) -> int:
             print(render_diff(comparison))
         return 1 if comparison.has_blocking_change else 0
 
-    if args.provider not in {"codex", "antigravity"}:
+    if args.provider not in {"codex", "antigravity", "claude"}:
         parser.print_help()
         return 2
     if args.timeout < 1:
@@ -168,9 +187,16 @@ def main(argv: list[str] | None = None) -> int:
                 timeout=args.timeout,
                 keep_fixture=args.keep_fixture,
             )
-        else:
+        elif args.provider == "antigravity":
             report = probe_antigravity(
                 agy_executable=args.agy_executable,
+                model=args.model,
+                timeout=args.timeout,
+                keep_fixture=args.keep_fixture,
+            )
+        else:
+            report = probe_claude(
+                claude_executable=args.claude_executable,
                 model=args.model,
                 timeout=args.timeout,
                 keep_fixture=args.keep_fixture,
@@ -184,7 +210,12 @@ def main(argv: list[str] | None = None) -> int:
             comparison = compare_snapshots(
                 load_snapshot(args.baseline), snapshot_from_report(report)
             )
-    except (ProbeSetupError, AntigravityProbeSetupError, SnapshotError) as exc:
+    except (
+        ProbeSetupError,
+        AntigravityProbeSetupError,
+        ClaudeProbeSetupError,
+        SnapshotError,
+    ) as exc:
         return _error(str(exc), args.json)
 
     if args.json:

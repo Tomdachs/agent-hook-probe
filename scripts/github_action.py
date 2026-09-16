@@ -45,8 +45,8 @@ def build_command(env: dict[str, str]) -> list[str]:
         raise ActionInputError("operation must be probe or diff")
 
     provider = _value(env, "AHP_PROVIDER", "codex").lower()
-    if provider not in {"codex", "antigravity"}:
-        raise ActionInputError("provider must be codex or antigravity")
+    if provider not in {"codex", "antigravity", "claude"}:
+        raise ActionInputError("provider must be codex, antigravity, or claude")
     command.append(provider)
 
     surface = _value(env, "AHP_SURFACE", "exec").lower()

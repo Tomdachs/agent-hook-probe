@@ -51,6 +51,13 @@ def test_antigravity_probe_does_not_pass_codex_surface() -> None:
     assert "--surface" not in command
 
 
+def test_claude_probe_does_not_pass_codex_surface() -> None:
+    command = build_command(base_env(AHP_PROVIDER="claude", AHP_MODEL="sonnet"))
+    assert command[4] == "claude"
+    assert "--surface" not in command
+    assert command[command.index("--model") + 1] == "sonnet"
+
+
 def test_diff_requires_both_paths() -> None:
     with pytest.raises(ActionInputError, match="requires baseline and current"):
         build_command(base_env(AHP_OPERATION="diff", AHP_BASELINE="baseline.json"))
@@ -96,6 +103,11 @@ def test_invalid_inputs_are_rejected(key: str, value: str, message: str) -> None
 def test_antigravity_rejects_nondefault_surface() -> None:
     with pytest.raises(ActionInputError, match="only supported for the codex"):
         build_command(base_env(AHP_PROVIDER="antigravity", AHP_SURFACE="tui"))
+
+
+def test_claude_rejects_nondefault_surface() -> None:
+    with pytest.raises(ActionInputError, match="only supported for the codex"):
+        build_command(base_env(AHP_PROVIDER="claude", AHP_SURFACE="tui"))
 
 
 def test_overwrite_requires_snapshot_path() -> None:
