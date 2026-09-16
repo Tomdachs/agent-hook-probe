@@ -132,7 +132,7 @@ def test_headless_command_keeps_permission_bypass_disabled() -> None:
     command = build_antigravity_command(["agy"], Path("/tmp/probe"), "probe", 90, None)
     assert "--dangerously-skip-permissions" not in command
     assert "--sandbox" in command
-    assert command[command.index("--add-dir") + 1] == "/tmp/probe"
+    assert command[command.index("--add-dir") + 1] == str(Path("/tmp/probe"))
     assert command[command.index("--output-format") + 1] == "json"
     assert command[command.index("--print-timeout") + 1] == "90s"
 
