@@ -7,6 +7,8 @@ from agent_hook_probe.codex import (
     analyse_codex_records,
     build_codex_exec_command,
     build_codex_hooks_override,
+    build_codex_project_trust_override,
+    build_codex_tui_command,
     write_codex_fixture,
 )
 
@@ -129,3 +131,41 @@ def test_exec_command_accepts_model_override(tmp_path: Path) -> None:
     records_dir = write_codex_fixture(tmp_path)
     command = build_codex_exec_command(["codex"], tmp_path, records_dir, "probe", "example-model")
     assert command[command.index("--model") + 1] == "example-model"
+
+
+def test_project_trust_override_is_scoped_to_disposable_workspace(tmp_path: Path) -> None:
+    override = build_codex_project_trust_override(tmp_path)
+    assert override.startswith("projects={")
+    assert str(tmp_path) in override
+    assert 'trust_level="trusted"' in override
+
+
+def test_exec_command_uses_session_only_project_trust(tmp_path: Path) -> None:
+    records_dir = write_codex_fixture(tmp_path)
+    command = build_codex_exec_command(["codex"], tmp_path, records_dir, "probe", None)
+    assert any(part.startswith("projects={") for part in command)
+
+
+def test_tui_command_is_sandboxed_and_non_persistent(tmp_path: Path) -> None:
+    records_dir = write_codex_fixture(tmp_path)
+    command = build_codex_tui_command(["codex"], tmp_path, records_dir, "probe", None)
+    assert "--dangerously-bypass-hook-trust" in command
+    assert "--dangerously-bypass-approvals-and-sandbox" not in command
+    assert command[command.index("-s") + 1] == "workspace-write"
+    assert command[command.index("-a") + 1] == "never"
+    assert "--no-alt-screen" in command
+    assert 'history.persistence="none"' in command
+    assert any(part.startswith("projects={") for part in command)
+    assert any(part.startswith("hooks={") for part in command)
+
+
+def test_tui_report_preserves_surface_name() -> None:
+    report = analyse_codex_records(
+        passing_records(),
+        runtime_version="codex-cli 9.9.9",
+        duration_ms=12,
+        artifact_ok=True,
+        mode="tui",
+    )
+    assert report.result == "PASS"
+    assert report.mode == "tui"

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import shlex
@@ -69,6 +70,11 @@ def build_codex_hooks_override(records_dir: Path) -> str:
     return "hooks={" + ",".join(event_tables) + "}"
 
 
+def build_codex_project_trust_override(workspace: Path) -> str:
+    """Trust only the disposable workspace for this invocation, without persisting it."""
+    return f'projects={{{_toml_string(str(workspace))}={{trust_level="trusted"}}}}'
+
+
 def write_codex_fixture(workspace: Path) -> Path:
     records_dir = workspace / ".agent-hook-probe-records"
     records_dir.mkdir(parents=True, exist_ok=True)
@@ -124,6 +130,7 @@ def analyse_codex_records(
     duration_ms: int,
     artifact_ok: bool,
     fixture_path: str | None = None,
+    mode: str = "exec",
 ) -> ProbeReport:
     checks = [
         _count_check(records, "SessionStart"),
@@ -207,7 +214,7 @@ def analyse_codex_records(
         probe_version=__version__,
         provider="codex",
         runtime_version=runtime_version,
-        mode="exec",
+        mode=mode,
         checks=tuple(checks),
         result=result,
         duration_ms=duration_ms,
@@ -250,6 +257,8 @@ def build_codex_exec_command(
         "features.hooks=true",
         "-c",
         build_codex_hooks_override(records_dir),
+        "-c",
+        build_codex_project_trust_override(workspace),
         "-C",
         str(workspace),
         "-s",
@@ -260,6 +269,66 @@ def build_codex_exec_command(
         command.extend(("--model", model))
     command.append(prompt)
     return command
+
+
+def build_codex_tui_command(
+    codex_command: Sequence[str],
+    workspace: Path,
+    records_dir: Path,
+    prompt: str,
+    model: str | None,
+) -> list[str]:
+    command = [
+        *codex_command,
+        "--dangerously-bypass-hook-trust",
+        "-c",
+        "features.hooks=true",
+        "-c",
+        build_codex_hooks_override(records_dir),
+        "-c",
+        build_codex_project_trust_override(workspace),
+        "-c",
+        'history.persistence="none"',
+        "-C",
+        str(workspace),
+        "-s",
+        "workspace-write",
+        "-a",
+        "never",
+        "--no-alt-screen",
+    ]
+    if model:
+        command.extend(("--model", model))
+    command.append(prompt)
+    return command
+
+
+def _probe_prompt() -> str:
+    if os.name == "nt":
+        shell_command = f"Set-Content -NoNewline -Path {TARGET_FILE} -Value {TARGET_VALUE}"
+    else:
+        shell_command = f"printf %s {TARGET_VALUE} > {TARGET_FILE}"
+    return (
+        "This is a lifecycle-hook conformance probe. Use the shell tool exactly once and "
+        "do not use any other tool. Run this exact shell command:\n"
+        f"{shell_command}\n"
+        "After it succeeds, reply exactly HOOK_PROBE_DONE."
+    )
+
+
+def _init_workspace(workspace: Path, git: str) -> Path:
+    records_dir = write_codex_fixture(workspace)
+    init = subprocess.run(
+        [git, "init", "-q", str(workspace)],
+        stdin=subprocess.DEVNULL,
+        capture_output=True,
+        text=True,
+        timeout=15,
+        check=False,
+    )
+    if init.returncode != 0:
+        raise ProbeSetupError("could not initialize disposable Git repository")
+    return records_dir
 
 
 def probe_codex(
@@ -282,29 +351,10 @@ def probe_codex(
     workspace = Path(tempfile.mkdtemp(prefix="agent-hook-probe-"))
     started = time.monotonic()
     try:
-        records_dir = write_codex_fixture(workspace)
-        init = subprocess.run(
-            [git, "init", "-q", str(workspace)],
-            stdin=subprocess.DEVNULL,
-            capture_output=True,
-            text=True,
-            timeout=15,
-            check=False,
+        records_dir = _init_workspace(workspace, git)
+        command = build_codex_exec_command(
+            codex_command, workspace, records_dir, _probe_prompt(), model
         )
-        if init.returncode != 0:
-            raise ProbeSetupError("could not initialize disposable Git repository")
-
-        if os.name == "nt":
-            shell_command = f"Set-Content -NoNewline -Path {TARGET_FILE} -Value {TARGET_VALUE}"
-        else:
-            shell_command = f"printf %s {TARGET_VALUE} > {TARGET_FILE}"
-        prompt = (
-            "This is a lifecycle-hook conformance probe. Use the shell tool exactly once and "
-            "do not use any other tool. Run this exact shell command:\n"
-            f"{shell_command}\n"
-            "After it succeeds, reply exactly HOOK_PROBE_DONE."
-        )
-        command = build_codex_exec_command(codex_command, workspace, records_dir, prompt, model)
         try:
             completed = subprocess.run(
                 command,
@@ -331,5 +381,128 @@ def probe_codex(
             fixture_path=str(workspace) if keep_fixture else None,
         )
     finally:
+        if not keep_fixture:
+            shutil.rmtree(workspace, ignore_errors=True)
+
+
+def _drain_pty(master_fd: int) -> None:
+    try:
+        while True:
+            chunk = os.read(master_fd, 65536)
+            if not chunk:
+                return
+    except (BlockingIOError, OSError):
+        return
+
+
+def probe_codex_tui(
+    *,
+    codex_executable: str | None = None,
+    model: str | None = None,
+    timeout: int = 180,
+    keep_fixture: bool = False,
+) -> ProbeReport:
+    if os.name == "nt":
+        raise ProbeSetupError("Codex TUI probe currently requires Linux, WSL, or macOS")
+
+    # Imported lazily so the package remains importable on Windows.
+    import fcntl
+    import pty
+    import struct
+    import termios
+
+    executable = codex_executable or shutil.which("codex")
+    if not executable:
+        raise ProbeSetupError("Codex CLI was not found on PATH")
+    codex_command = [executable]
+    runtime_version = _runtime_version(codex_command)
+
+    git = shutil.which("git")
+    if not git:
+        raise ProbeSetupError("Git was not found on PATH")
+
+    workspace = Path(tempfile.mkdtemp(prefix="agent-hook-probe-tui-"))
+    started = time.monotonic()
+    master_fd = -1
+    process: subprocess.Popen[bytes] | None = None
+    try:
+        records_dir = _init_workspace(workspace, git)
+        command = build_codex_tui_command(
+            codex_command, workspace, records_dir, _probe_prompt(), model
+        )
+        master_fd, slave_fd = pty.openpty()
+        fcntl.ioctl(slave_fd, termios.TIOCSWINSZ, struct.pack("HHHH", 40, 120, 0, 0))
+        env = os.environ.copy()
+        env["TERM"] = "xterm-256color"
+        env.setdefault("COLORTERM", "truecolor")
+        process = subprocess.Popen(
+            command,
+            stdin=slave_fd,
+            stdout=slave_fd,
+            stderr=slave_fd,
+            close_fds=True,
+            env=env,
+        )
+        os.close(slave_fd)
+        os.set_blocking(master_fd, False)
+
+        completed_at: float | None = None
+        deadline = started + timeout
+        while time.monotonic() < deadline and process.poll() is None:
+            _drain_pty(master_fd)
+            records = _load_records(records_dir)
+            artifact = workspace / TARGET_FILE
+            if artifact.is_file():
+                if completed_at is None:
+                    completed_at = time.monotonic()
+                # Once the canary proves the turn ran, allow hooks a short grace period.
+                # Missing PostToolUse/Stop regressions should not wait for the full timeout.
+                if any(record.get("event") == "Stop" for record in records) or (
+                    time.monotonic() - completed_at >= 5
+                ):
+                    os.write(master_fd, b"\x03")
+                    break
+            time.sleep(0.1)
+        else:
+            if process.poll() is None:
+                os.write(master_fd, b"\x03")
+
+        exit_deadline = time.monotonic() + 12
+        while process.poll() is None and time.monotonic() < exit_deadline:
+            _drain_pty(master_fd)
+            time.sleep(0.1)
+        if process.poll() is None:
+            os.write(master_fd, b"\x03")
+            time.sleep(1)
+        if process.poll() is None:
+            process.terminate()
+            try:
+                process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.wait()
+
+        if not (workspace / TARGET_FILE).is_file():
+            raise ProbeSetupError(f"Codex TUI probe did not complete within {timeout} seconds")
+
+        artifact = workspace / TARGET_FILE
+        artifact_ok = artifact.read_text(encoding="utf-8") == TARGET_VALUE
+        records = _load_records(records_dir)
+        duration_ms = round((time.monotonic() - started) * 1000)
+        return analyse_codex_records(
+            records,
+            runtime_version=runtime_version,
+            duration_ms=duration_ms,
+            artifact_ok=artifact_ok,
+            fixture_path=str(workspace) if keep_fixture else None,
+            mode="tui",
+        )
+    finally:
+        if master_fd >= 0:
+            with contextlib.suppress(OSError):
+                os.close(master_fd)
+        if process is not None and process.poll() is None:
+            process.kill()
+            process.wait()
         if not keep_fixture:
             shutil.rmtree(workspace, ignore_errors=True)

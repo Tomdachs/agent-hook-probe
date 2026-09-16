@@ -4,36 +4,45 @@
 
 **Verify that your coding-agent hooks actually fire.**
 
-Agent Hook Probe runs disposable workspaces against real coding-agent runtimes and checks observable lifecycle behavior. It catches missing hooks, duplicates, broken pre/post pairing, lifecycle-order regressions, and payload-contract drift instead of assuming a valid config means a working hook.
+Agent Hook Probe runs disposable workspaces against real coding-agent runtimes and checks observable lifecycle behavior. It catches missing hooks, duplicates, broken pre/post pairing, execution-surface regressions, lifecycle-order regressions, and payload-contract drift instead of assuming a valid config means a working hook.
 
 ## Provider support
 
 | Provider | Surface | Probe canary | Status |
 | --- | --- | --- | --- |
-| Codex CLI | `codex exec` | one sandboxed shell write | Released in `v0.1.0`; live-verified |
-| Antigravity CLI | headless `agy -p` | one workspace `view_file` | `v0.2.1`; live-verified on Antigravity CLI 1.2.4 |
+| Codex CLI | `codex exec` | one sandboxed shell write | `v0.3.0`; live-verified on Codex CLI 0.154.0 |
+| Codex CLI | interactive TUI | one sandboxed shell write | `v0.3.0`; live-verified on WSL with Codex CLI 0.154.0 |
+| Antigravity CLI | headless `agy -p` | one workspace `view_file` | `v0.3.0`; live-verified on Antigravity CLI 1.2.4 |
 | Claude Code | — | — | Planned |
+
+The Codex TUI probe is currently supported on Linux, WSL, and macOS. Windows can still use the Codex `exec` probe.
 
 ## Try it
 
-Python 3.11+, Git, Codex CLI, and an authenticated Codex session are required. The probe performs one minimal model turn, so normal provider usage applies.
+Python 3.11+, Git, the target provider CLI, and an authenticated provider session are required. Each probe performs one minimal model turn, so normal provider usage applies.
 
 ```bash
-uvx --from https://github.com/Tomdachs/agent-hook-probe/releases/download/v0.2.1/agent_hook_probe-0.2.1-py3-none-any.whl agent-hook-probe codex
+uvx --from https://github.com/Tomdachs/agent-hook-probe/releases/download/v0.3.0/agent_hook_probe-0.3.0-py3-none-any.whl agent-hook-probe codex
 ```
 
-Antigravity uses the same release wheel:
+Probe the interactive Codex TUI instead of `exec`:
 
 ```bash
-uvx --from https://github.com/Tomdachs/agent-hook-probe/releases/download/v0.2.1/agent_hook_probe-0.2.1-py3-none-any.whl agent-hook-probe antigravity
+uvx --from https://github.com/Tomdachs/agent-hook-probe/releases/download/v0.3.0/agent_hook_probe-0.3.0-py3-none-any.whl agent-hook-probe codex --surface tui
 ```
 
-Typical Codex output:
+Probe Antigravity with the same release wheel:
+
+```bash
+uvx --from https://github.com/Tomdachs/agent-hook-probe/releases/download/v0.3.0/agent_hook_probe-0.3.0-py3-none-any.whl agent-hook-probe antigravity
+```
+
+Typical Codex result:
 
 ```text
-Agent Hook Probe 0.1.0
+Agent Hook Probe 0.3.0
 Runtime: codex-cli 0.154.0
-Mode:    exec
+Mode:    tui
 
 PASS  SessionStart             expected 1, observed 1
 PASS  UserPromptSubmit         expected 1, observed 1
@@ -48,15 +57,17 @@ PASS  probe artifact           expected hook-probe-ok, observed hook-probe-ok
 Result: PASS
 ```
 
+## Codex execution surfaces
+
+`agent-hook-probe codex` keeps `exec` as the default for backward compatibility. Use `--surface tui` to run the same lifecycle contract through the interactive terminal UI.
+
+The TUI adapter creates a real pseudo-terminal, starts Codex with a 120x40 terminal, waits for the canary turn to complete, then closes the idle TUI with `Ctrl+C` so `SessionEnd` can be observed. It does not scrape the screen to decide pass/fail; hook records and the canary remain the source of truth.
+
+Both Codex surfaces inject the probe-generated hooks and disposable-project trust as per-invocation config. They do not add the temporary workspace to `~/.codex/config.toml`. The TUI additionally sets `history.persistence="none"` so its probe session is not retained in normal Codex history.
+
 ## Antigravity adapter
 
 Antigravity CLI documents workspace hooks in `.agents/hooks.json` and headless execution with `agy -p`. The adapter uses a read-only `view_file` canary and does **not** enable `--dangerously-skip-permissions`.
-
-After installing the `main` branch and authenticating Antigravity once:
-
-```bash
-agent-hook-probe antigravity
-```
 
 The Antigravity probe checks:
 
@@ -64,19 +75,19 @@ The Antigravity probe checks:
 - exactly one target `PreToolUse` and `PostToolUse` for `view_file`;
 - matching `stepIdx` and `toolCall` across those target tool hooks;
 - exactly one `Stop` event;
-- common camelCase payload fields documented by Antigravity;
+- common camelCase payload fields;
 - runtime order `PreToolUse < PostToolUse < Stop`;
-- the canary file was actually written with the expected content.
+- the probe-owned canary remained intact while the target read occurred.
 
-If Antigravity is installed but not signed in, the command exits with setup error code `2` and tells you to run `agy` once. It does not misreport authentication failure as a hook regression.
+If Antigravity is installed but not signed in, the command exits with setup error code `2`. It does not misreport authentication failure as a hook regression.
 
 ## Safety model
 
 Every provider probe owns a newly created temporary Git repository and deletes it by default. The public report never includes raw hook payloads, prompts, transcript paths, absolute workspace paths, credentials, or provider stdout/stderr.
 
-For Codex, hooks are injected through per-invocation config. Codex's hook-trust automation flag is used only for the probe-generated hooks; the model-generated command remains inside `workspace-write` and the approval/sandbox bypass is never used.
+For Codex, hooks are injected through per-invocation config. Codex's hook-trust automation flag is used only for the probe-generated hook definition. The model-generated canary command remains inside `workspace-write`, and the approval/sandbox bypass is never used. Disposable project trust is also per-invocation, so the probe does not persist temporary trust entries in the user's Codex config.
 
-For Antigravity, the probe writes `.agents/hooks.json` plus a probe-owned canary only inside its disposable repository, explicitly adds that directory as the active workspace, and asks `view_file` to read the canary. It also enables Antigravity's terminal sandbox. It does not edit `~/.gemini/antigravity-cli/settings.json`, `~/.gemini/config/hooks.json`, permissions, or existing projects.
+For Antigravity, the probe writes `.agents/hooks.json` plus a probe-owned canary only inside its disposable repository, explicitly adds that directory as the active workspace, and asks `view_file` to read the canary. It enables Antigravity's terminal sandbox and does not edit global Antigravity settings, hooks, permissions, or existing projects.
 
 Use `--keep-fixture` only when you intentionally need raw disposable records for debugging. Retained fixtures can contain provider-supplied session identifiers and transcript paths.
 
@@ -86,6 +97,7 @@ See [docs/safety.md](docs/safety.md), [docs/codex-contract.md](docs/codex-contra
 
 ```bash
 agent-hook-probe codex --json
+agent-hook-probe codex --surface tui --json
 agent-hook-probe antigravity --json
 ```
 
@@ -93,15 +105,16 @@ Exit codes:
 
 - `0`: all checked hook contracts passed;
 - `1`: the provider ran, but one or more observed hook contracts failed;
-- `2`: setup/runtime error such as missing CLI, authentication failure, missing Git, or timeout.
+- `2`: setup/runtime error such as missing CLI, authentication failure, missing Git, unsupported surface, or timeout.
 
 CI unit tests do not call a model. Live provider probes remain separate because they require authentication and consume provider usage.
 
 ## Options
 
-Both provider commands support `--model`, `--timeout`, `--keep-fixture`, and `--json`. You can also point at a specific executable with `--codex` or `--agy`.
+Both provider commands support `--model`, `--timeout`, `--keep-fixture`, and `--json`. You can point at a specific executable with `--codex` or `--agy`. Codex additionally supports `--surface exec|tui`.
 
 ```bash
+agent-hook-probe codex --surface tui --timeout 120
 agent-hook-probe antigravity --model <model> --timeout 120
 ```
 
@@ -128,7 +141,7 @@ uv run pytest
 uv build
 ```
 
-CI validates Python 3.11-3.14 on Linux, Windows, and macOS. Provider-specific live smoke tests are documented release gates, not CI jobs with hidden credentials.
+CI validates Python 3.11-3.14 on Linux, Windows, and macOS. Provider-specific live smoke tests are release gates, not CI jobs with hidden credentials.
 
 ## Scope and roadmap
 

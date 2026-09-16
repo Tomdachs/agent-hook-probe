@@ -14,13 +14,21 @@ Agent Hook Probe should grow by adding evidence-backed lifecycle contracts, not 
 
 - Antigravity CLI headless adapter using project-local `.agents/hooks.json`.
 - Passive Pre/PostInvocation checks plus read-only `view_file` Pre/PostToolUse pairing.
-- Stop, payload-schema, lifecycle-order, and canary-artifact checks.
+- Stop, payload-schema, lifecycle-order, and canary checks.
 - No global Antigravity settings changes and no permission bypass.
 - Live-verified against Antigravity CLI 1.2.4 on WSL.
 
+## v0.3 — released
+
+- Codex interactive/TUI execution-surface probe on Linux, WSL, and macOS.
+- Real PTY automation with hook/canary evidence rather than screen scraping.
+- TUI `SessionEnd` verification through normal idle `Ctrl+C` exit.
+- Session-only disposable-project trust for both Codex exec and TUI probes.
+- TUI history disabled with `history.persistence="none"`.
+- Live-verified locally against Codex CLI 0.154.0 on WSL before release.
+
 ## Next candidates
 
-- Codex interactive/TUI probe where automation can drive the lifecycle without weakening safety boundaries.
 - Regression snapshots across provider versions and execution surfaces.
 - Claude Code adapter after defining a similarly isolated, deterministic fixture.
 - GitHub Action wrapper once provider authentication and usage expectations can be made explicit.

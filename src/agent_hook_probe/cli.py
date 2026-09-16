@@ -6,7 +6,7 @@ import sys
 
 from . import __version__
 from .antigravity import AntigravityProbeSetupError, probe_antigravity
-from .codex import ProbeSetupError, probe_codex
+from .codex import ProbeSetupError, probe_codex, probe_codex_tui
 from .model import ProbeReport
 
 
@@ -40,6 +40,12 @@ def build_parser() -> argparse.ArgumentParser:
     codex = subparsers.add_parser("codex", help="probe Codex CLI hooks with a disposable fixture")
     codex.add_argument("--json", action="store_true", help="emit a privacy-minimized JSON report")
     codex.add_argument("--model", help="override the model used for the one minimal probe turn")
+    codex.add_argument(
+        "--surface",
+        choices=("exec", "tui"),
+        default="exec",
+        help="Codex execution surface to probe (default: exec)",
+    )
     codex.add_argument("--timeout", type=int, default=180, help="Codex turn timeout in seconds")
     codex.add_argument(
         "--keep-fixture",
@@ -87,7 +93,8 @@ def main(argv: list[str] | None = None) -> int:
         return _error("--timeout must be at least 1 second", args.json)
     try:
         if args.provider == "codex":
-            report = probe_codex(
+            probe = probe_codex_tui if args.surface == "tui" else probe_codex
+            report = probe(
                 codex_executable=args.codex_executable,
                 model=args.model,
                 timeout=args.timeout,
