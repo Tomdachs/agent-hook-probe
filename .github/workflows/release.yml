@@ -2,7 +2,7 @@ name: Release
 
 on:
   push:
-    tags: ['v*']
+    tags: ['v*.*.*']
 
 permissions:
   contents: write
@@ -64,3 +64,12 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release create "$GITHUB_REF_NAME" dist/* --generate-notes --verify-tag
+      - name: Update floating minor tag
+        shell: bash
+        run: |
+          if [[ "$GITHUB_REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+            MINOR_TAG="v${VERSION%.*}"
+            git tag -f "$MINOR_TAG" "$GITHUB_SHA"
+            git push origin "refs/tags/$MINOR_TAG" --force
+          fi

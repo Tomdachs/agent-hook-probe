@@ -7,7 +7,7 @@ Agent Hook Probe ships a composite GitHub Action so repositories can gate on sav
 Offline `diff` is the safest default for ordinary pull-request CI because it does not launch a provider, consume model usage, or require credentials.
 
 ```yaml
-- uses: Tomdachs/agent-hook-probe@v0.5.1
+- uses: Tomdachs/agent-hook-probe@v0.5
   with:
     operation: diff
     baseline: .github/agent-hook-probe/codex-exec-baseline.json
@@ -22,7 +22,7 @@ Every successful parse publishes five Action outputs: `status`, `provider`, `mod
 
 ```yaml
 - id: hook-contract
-  uses: Tomdachs/agent-hook-probe@v0.5.1
+  uses: Tomdachs/agent-hook-probe@v0.5
   with:
     operation: diff
     baseline: .github/agent-hook-probe/codex-exec-baseline.json
@@ -38,7 +38,7 @@ Every successful parse publishes five Action outputs: `status`, `provider`, `mod
 Live mode deliberately does not install, upgrade, or authenticate a provider CLI. Pin and prepare the provider in earlier workflow steps or use a pre-authenticated self-hosted runner, then invoke the action:
 
 ```yaml
-- uses: Tomdachs/agent-hook-probe@v0.5.1
+- uses: Tomdachs/agent-hook-probe@v0.5
   with:
     operation: probe
     provider: codex
@@ -63,4 +63,6 @@ The action intentionally does not expose `--keep-fixture`; raw hook records can 
 
 ## Supply-chain notes
 
-The composite action pins its own `setup-uv` dependency to an immutable commit. Consumers can reference the convenient release tag shown above or pin Agent Hook Probe itself to a commit SHA when their policy requires immutable third-party action references.
+The composite action pins its own `setup-uv` dependency to an immutable commit. `@v0.5` is the floating tag for backward-compatible 0.5.x patch releases. Pin an exact release such as `@v0.5.2` or a commit SHA when your policy requires immutable third-party action references.
+
+The release workflow updates only the matching minor tag after a stable `vX.Y.Z` release succeeds. No broad `v0` tag is published because pre-1.0 minor releases may introduce incompatible changes.

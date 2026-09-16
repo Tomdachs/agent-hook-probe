@@ -50,6 +50,12 @@ Agent Hook Probe should grow by adding evidence-backed lifecycle contracts, not 
 - Cross-platform CI asserts the Action output contract on Linux, Windows, and macOS.
 - Release workflow self-tests the output contract before publishing artifacts.
 
+## v0.5.2 — release candidate
+
+- Floating `v0.5` Action tag tracks backward-compatible 0.5.x patch releases.
+- Release workflow updates that minor tag only after a stable `vX.Y.Z` release succeeds.
+- Floating minor-tag pushes do not trigger a second package release.
+
 ## Next candidates
 
 - Claude Code adapter is implemented on `feat/claude-adapter`, but its full live release gate is parked until an eligible Claude Code authentication environment is available.
