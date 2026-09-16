@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from agent_hook_probe.codex import (
@@ -136,7 +137,7 @@ def test_exec_command_accepts_model_override(tmp_path: Path) -> None:
 def test_project_trust_override_is_scoped_to_disposable_workspace(tmp_path: Path) -> None:
     override = build_codex_project_trust_override(tmp_path)
     assert override.startswith("projects={")
-    assert str(tmp_path) in override
+    assert json.dumps(str(tmp_path)) in override
     assert 'trust_level="trusted"' in override
 
 
