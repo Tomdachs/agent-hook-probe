@@ -27,9 +27,16 @@ Agent Hook Probe should grow by adding evidence-backed lifecycle contracts, not 
 - TUI history disabled with `history.persistence="none"`.
 - Live-verified locally against Codex CLI 0.154.0 on WSL before release.
 
+## v0.4 — released
+
+- Privacy-minimized regression snapshots for every supported provider surface.
+- Live `--baseline` comparison and offline `diff` command.
+- PASS-to-FAIL regression, check removal, expected-contract drift, and improvement classification.
+- Runtime-version changes are informational rather than failures by themselves.
+- Snapshot overwrite protection and provider/surface compatibility checks.
+
 ## Next candidates
 
-- Regression snapshots across provider versions and execution surfaces.
 - Claude Code adapter after defining a similarly isolated, deterministic fixture.
 - GitHub Action wrapper once provider authentication and usage expectations can be made explicit.
 

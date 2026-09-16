@@ -22,10 +22,16 @@ The Antigravity adapter uses a read-only `view_file` canary. During the 1.2.4 re
 
 ## Authentication
 
-Agent Hook Probe does not read, copy, migrate, print, or persist provider credentials. Providers must already be authenticated according to their own supported flow. Missing authentication is reported as setup error code `2`, not as a hook conformance failure.
+Agent Hook Probe does not read, copy, migrate, print, or persist provider credentials. Providers must already be authenticated according to their own supported flow. Missing authentication is reported as setup error code `2`, not as a hook conformance failure. Codex usage-limit exhaustion is handled the same way. The TUI keeps only a bounded in-memory terminal-output tail long enough to identify this known provider blocker; terminal contents are not written to snapshots or public reports.
 
 ## Sensitive data
 
 Raw hook payloads can contain working paths, the probe prompt, tool arguments, session or conversation ids, and transcript paths. They remain inside the disposable fixture and are not copied to text or JSON reports. A retained fixture is therefore debugging material, not a support-safe report.
 
 The probe does not inspect auth files, environment secret values, browser state, SSH material, or existing project content.
+
+## Regression snapshot boundary
+
+Saved regression snapshots contain only the same normalized public report that the CLI can emit, plus a UTC capture timestamp. `fixture_path` is stripped even when `--keep-fixture` was used for the live probe. Raw hook payloads, model prompts, provider stdout/stderr, transcript paths, and credentials are never copied into snapshots.
+
+Snapshot output is written only when the user supplies `--save-snapshot`. Existing files are protected from accidental replacement unless `--overwrite-snapshot` is also supplied. Baseline comparison reads only the selected snapshot JSON files and does not inspect provider configuration or project files.

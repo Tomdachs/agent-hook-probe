@@ -5,6 +5,7 @@ from pathlib import Path
 
 from agent_hook_probe.codex import (
     TARGET_FILE,
+    _codex_provider_setup_error,
     analyse_codex_records,
     build_codex_exec_command,
     build_codex_hooks_override,
@@ -156,6 +157,7 @@ def test_tui_command_is_sandboxed_and_non_persistent(tmp_path: Path) -> None:
     assert command[command.index("-a") + 1] == "never"
     assert "--no-alt-screen" in command
     assert 'history.persistence="none"' in command
+    assert "notices.hide_rate_limit_model_nudge=true" in command
     assert any(part.startswith("projects={") for part in command)
     assert any(part.startswith("hooks={") for part in command)
 
@@ -170,3 +172,19 @@ def test_tui_report_preserves_surface_name() -> None:
     )
     assert report.result == "PASS"
     assert report.mode == "tui"
+
+
+def test_provider_setup_error_detects_provider_usage_limit() -> None:
+    screen = b"\x1b[31mYou've hit your usage limit. Try again later.\x1b[0m"
+    message = _codex_provider_setup_error(screen)
+    assert message is not None
+    assert "usage limit" in message
+
+
+def test_provider_setup_error_ignores_normal_output() -> None:
+    assert _codex_provider_setup_error(b"HOOK_PROBE_DONE") is None
+
+
+def test_provider_setup_error_accepts_exec_text_output() -> None:
+    message = _codex_provider_setup_error('{"message":"You\'ve hit your usage limit."}')
+    assert message == "Codex cannot run because the provider usage limit is exhausted"

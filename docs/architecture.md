@@ -52,3 +52,9 @@ Raw records are analyzer input, not report output.
 ## Report boundary
 
 The public report includes provider/version, execution surface, check names, expected/observed summaries, result, and duration. It does not include the model prompt, raw provider stdout/stderr, hook payloads, session/conversation ids, transcript paths, or normal fixture paths.
+
+## Regression snapshot flow
+
+Provider adapters still produce the same `ProbeReport`. Snapshot handling sits after that boundary: it removes any retained `fixture_path`, adds a UTC capture timestamp, and writes schema-versioned JSON only when requested. Comparison operates entirely on normalized snapshots, so offline `diff` never launches a provider or reads hook payloads.
+
+The diff engine keys checks by stable check name. Runtime-version changes are metadata; PASS-to-FAIL and removed checks are regressions, while added checks and changed expectations are contract drift. This keeps provider execution concerns separate from historical comparison.

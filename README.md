@@ -10,9 +10,9 @@ Agent Hook Probe runs disposable workspaces against real coding-agent runtimes a
 
 | Provider | Surface | Probe canary | Status |
 | --- | --- | --- | --- |
-| Codex CLI | `codex exec` | one sandboxed shell write | `v0.3.0`; live-verified on Codex CLI 0.154.0 |
-| Codex CLI | interactive TUI | one sandboxed shell write | `v0.3.0`; live-verified on WSL with Codex CLI 0.154.0 |
-| Antigravity CLI | headless `agy -p` | one workspace `view_file` | `v0.3.0`; live-verified on Antigravity CLI 1.2.4 |
+| Codex CLI | `codex exec` | one sandboxed shell write | `v0.4.0`; live-verified on Codex CLI 0.154.0 |
+| Codex CLI | interactive TUI | one sandboxed shell write | `v0.4.0`; live-verified on WSL with Codex CLI 0.154.0 |
+| Antigravity CLI | headless `agy -p` | one workspace `view_file` | `v0.4.0`; live-verified on Antigravity CLI 1.2.4 |
 | Claude Code | — | — | Planned |
 
 The Codex TUI probe is currently supported on Linux, WSL, and macOS. Windows can still use the Codex `exec` probe.
@@ -22,25 +22,25 @@ The Codex TUI probe is currently supported on Linux, WSL, and macOS. Windows can
 Python 3.11+, Git, the target provider CLI, and an authenticated provider session are required. Each probe performs one minimal model turn, so normal provider usage applies.
 
 ```bash
-uvx --from https://github.com/Tomdachs/agent-hook-probe/releases/download/v0.3.0/agent_hook_probe-0.3.0-py3-none-any.whl agent-hook-probe codex
+uvx --from https://github.com/Tomdachs/agent-hook-probe/releases/download/v0.4.0/agent_hook_probe-0.4.0-py3-none-any.whl agent-hook-probe codex
 ```
 
 Probe the interactive Codex TUI instead of `exec`:
 
 ```bash
-uvx --from https://github.com/Tomdachs/agent-hook-probe/releases/download/v0.3.0/agent_hook_probe-0.3.0-py3-none-any.whl agent-hook-probe codex --surface tui
+uvx --from https://github.com/Tomdachs/agent-hook-probe/releases/download/v0.4.0/agent_hook_probe-0.4.0-py3-none-any.whl agent-hook-probe codex --surface tui
 ```
 
 Probe Antigravity with the same release wheel:
 
 ```bash
-uvx --from https://github.com/Tomdachs/agent-hook-probe/releases/download/v0.3.0/agent_hook_probe-0.3.0-py3-none-any.whl agent-hook-probe antigravity
+uvx --from https://github.com/Tomdachs/agent-hook-probe/releases/download/v0.4.0/agent_hook_probe-0.4.0-py3-none-any.whl agent-hook-probe antigravity
 ```
 
 Typical Codex result:
 
 ```text
-Agent Hook Probe 0.3.0
+Agent Hook Probe 0.4.0
 Runtime: codex-cli 0.154.0
 Mode:    tui
 
@@ -64,6 +64,30 @@ Result: PASS
 The TUI adapter creates a real pseudo-terminal, starts Codex with a 120x40 terminal, waits for the canary turn to complete, then closes the idle TUI with `Ctrl+C` so `SessionEnd` can be observed. It does not scrape the screen to decide pass/fail; hook records and the canary remain the source of truth.
 
 Both Codex surfaces inject the probe-generated hooks and disposable-project trust as per-invocation config. They do not add the temporary workspace to `~/.codex/config.toml`. The TUI additionally sets `history.persistence="none"` so its probe session is not retained in normal Codex history.
+
+## Regression snapshots
+
+Save a privacy-minimized baseline from any provider surface:
+
+```bash
+agent-hook-probe codex --surface exec --save-snapshot baseline.json
+```
+
+After a provider update, run the same surface against that baseline:
+
+```bash
+agent-hook-probe codex --surface exec --baseline baseline.json --save-snapshot current.json
+```
+
+Or compare two already saved snapshots without calling a model:
+
+```bash
+agent-hook-probe diff baseline.json current.json
+```
+
+The comparison treats a runtime-version change by itself as informational. `PASS -> FAIL` and removed checks are regressions; added checks or changed `expected` contracts are drift; `FAIL -> PASS` is an improvement. Baseline and current snapshots must use the same provider and execution surface.
+
+Snapshot files contain the normalized public report plus capture time. They never contain raw hook payloads or retained fixture paths. Existing snapshot files are not overwritten unless `--overwrite-snapshot` is explicitly supplied.
 
 ## Antigravity adapter
 
@@ -91,7 +115,7 @@ For Antigravity, the probe writes `.agents/hooks.json` plus a probe-owned canary
 
 Use `--keep-fixture` only when you intentionally need raw disposable records for debugging. Retained fixtures can contain provider-supplied session identifiers and transcript paths.
 
-See [docs/safety.md](docs/safety.md), [docs/codex-contract.md](docs/codex-contract.md), and [docs/antigravity-contract.md](docs/antigravity-contract.md).
+See [docs/safety.md](docs/safety.md), [docs/codex-contract.md](docs/codex-contract.md), [docs/antigravity-contract.md](docs/antigravity-contract.md), and [docs/regression-snapshots.md](docs/regression-snapshots.md).
 
 ## JSON and CI
 
@@ -103,15 +127,14 @@ agent-hook-probe antigravity --json
 
 Exit codes:
 
-- `0`: all checked hook contracts passed;
-- `1`: the provider ran, but one or more observed hook contracts failed;
-- `2`: setup/runtime error such as missing CLI, authentication failure, missing Git, unsupported surface, or timeout.
+- provider probes: `0` when checks pass, `1` for hook-contract failure or blocking baseline regression/drift, `2` for setup/runtime/snapshot errors;
+- `diff`: `0` for unchanged or improved snapshots, `1` for regression or contract drift, `2` for invalid or incompatible snapshots.
 
-CI unit tests do not call a model. Live provider probes remain separate because they require authentication and consume provider usage.
+CI unit tests do not call a model. Live provider probes remain separate because they require authentication and consume provider usage. Codex usage-limit exhaustion is reported as setup error code `2`, not as a hook regression; the TUI adapter detects that blocker promptly instead of waiting for the full probe timeout.
 
 ## Options
 
-Both provider commands support `--model`, `--timeout`, `--keep-fixture`, and `--json`. You can point at a specific executable with `--codex` or `--agy`. Codex additionally supports `--surface exec|tui`.
+Both provider commands support `--model`, `--timeout`, `--keep-fixture`, `--json`, `--save-snapshot`, `--baseline`, and `--overwrite-snapshot`. You can point at a specific executable with `--codex` or `--agy`. Codex additionally supports `--surface exec|tui`.
 
 ```bash
 agent-hook-probe codex --surface tui --timeout 120

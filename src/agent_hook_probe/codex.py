@@ -289,6 +289,8 @@ def build_codex_tui_command(
         build_codex_project_trust_override(workspace),
         "-c",
         'history.persistence="none"',
+        "-c",
+        "notices.hide_rate_limit_model_nudge=true",
         "-C",
         str(workspace),
         "-s",
@@ -367,6 +369,9 @@ def probe_codex(
         except subprocess.TimeoutExpired as exc:
             raise ProbeSetupError(f"Codex probe timed out after {timeout} seconds") from exc
         if completed.returncode != 0:
+            setup_error = _codex_provider_setup_error(completed.stdout + "\n" + completed.stderr)
+            if setup_error is not None:
+                raise ProbeSetupError(setup_error)
             raise ProbeSetupError(f"Codex exec exited with status {completed.returncode}")
 
         artifact = workspace / TARGET_FILE
@@ -385,14 +390,30 @@ def probe_codex(
             shutil.rmtree(workspace, ignore_errors=True)
 
 
-def _drain_pty(master_fd: int) -> None:
+def _drain_pty(master_fd: int) -> bytes:
+    chunks: list[bytes] = []
     try:
         while True:
             chunk = os.read(master_fd, 65536)
             if not chunk:
-                return
+                break
+            chunks.append(chunk)
     except (BlockingIOError, OSError):
-        return
+        pass
+    return b"".join(chunks)
+
+
+def _codex_provider_setup_error(output: bytes | str) -> str | None:
+    # Provider output is used only to identify setup blockers. Hook pass/fail remains
+    # based exclusively on recorder events and the probe canary.
+    if isinstance(output, bytes):
+        lowered = output.lower()
+        usage_limit = b"you've hit your usage limit" in lowered
+    else:
+        usage_limit = "you've hit your usage limit" in output.lower()
+    if usage_limit:
+        return "Codex cannot run because the provider usage limit is exhausted"
+    return None
 
 
 def probe_codex_tui(
@@ -447,18 +468,25 @@ def probe_codex_tui(
         os.set_blocking(master_fd, False)
 
         completed_at: float | None = None
+        screen_tail = bytearray()
         deadline = started + timeout
         while time.monotonic() < deadline and process.poll() is None:
-            _drain_pty(master_fd)
+            screen_tail.extend(_drain_pty(master_fd))
+            if len(screen_tail) > 65536:
+                del screen_tail[:-65536]
+            setup_error = _codex_provider_setup_error(bytes(screen_tail))
+            if setup_error is not None:
+                raise ProbeSetupError(setup_error)
             records = _load_records(records_dir)
             artifact = workspace / TARGET_FILE
             if artifact.is_file():
                 if completed_at is None:
                     completed_at = time.monotonic()
-                # Once the canary proves the turn ran, allow hooks a short grace period.
+                # Once the canary proves the turn ran, allow enough grace for the final
+                # model response and Stop dispatch.
                 # Missing PostToolUse/Stop regressions should not wait for the full timeout.
                 if any(record.get("event") == "Stop" for record in records) or (
-                    time.monotonic() - completed_at >= 5
+                    time.monotonic() - completed_at >= 20
                 ):
                     os.write(master_fd, b"\x03")
                     break
