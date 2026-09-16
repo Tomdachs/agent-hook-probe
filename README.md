@@ -11,7 +11,7 @@ Agent Hook Probe runs disposable workspaces against real coding-agent runtimes a
 | Provider | Surface | Probe canary | Status |
 | --- | --- | --- | --- |
 | Codex CLI | `codex exec` | one sandboxed shell write | Released in `v0.1.0`; live-verified |
-| Antigravity CLI | headless `agy -p` | one workspace `view_file` | `v0.2.0`; live-verified on Antigravity CLI 1.2.4 |
+| Antigravity CLI | headless `agy -p` | one workspace `view_file` | `v0.2.1`; live-verified on Antigravity CLI 1.2.4 |
 | Claude Code | — | — | Planned |
 
 ## Try it
@@ -19,13 +19,13 @@ Agent Hook Probe runs disposable workspaces against real coding-agent runtimes a
 Python 3.11+, Git, Codex CLI, and an authenticated Codex session are required. The probe performs one minimal model turn, so normal provider usage applies.
 
 ```bash
-uvx --from https://github.com/Tomdachs/agent-hook-probe/releases/download/v0.2.0/agent_hook_probe-0.2.0-py3-none-any.whl agent-hook-probe codex
+uvx --from https://github.com/Tomdachs/agent-hook-probe/releases/download/v0.2.1/agent_hook_probe-0.2.1-py3-none-any.whl agent-hook-probe codex
 ```
 
 Antigravity uses the same release wheel:
 
 ```bash
-uvx --from https://github.com/Tomdachs/agent-hook-probe/releases/download/v0.2.0/agent_hook_probe-0.2.0-py3-none-any.whl agent-hook-probe antigravity
+uvx --from https://github.com/Tomdachs/agent-hook-probe/releases/download/v0.2.1/agent_hook_probe-0.2.1-py3-none-any.whl agent-hook-probe antigravity
 ```
 
 Typical Codex output:
