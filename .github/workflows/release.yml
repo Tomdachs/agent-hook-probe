@@ -38,6 +38,7 @@ jobs:
       - name: Assert composite action regression failure
         env:
           REGRESSION_OUTCOME: ${{ steps.release-regression.outcome }}
+        shell: bash
         run: test "$REGRESSION_OUTCOME" = "failure"
       - run: uv build
       - name: Verify tag matches package version

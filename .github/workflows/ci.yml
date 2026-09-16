@@ -77,4 +77,5 @@ jobs:
       - name: Assert regression failure
         env:
           REGRESSION_OUTCOME: ${{ steps.regression.outcome }}
+        shell: bash
         run: test "$REGRESSION_OUTCOME" = "failure"
