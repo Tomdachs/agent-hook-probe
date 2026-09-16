@@ -17,6 +17,12 @@ def test_invalid_timeout_returns_setup_error(capsys) -> None:
     assert payload["result"] == "ERROR"
 
 
+def test_antigravity_invalid_timeout_returns_setup_error(capsys) -> None:
+    assert main(["antigravity", "--timeout", "0", "--json"]) == 2
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["result"] == "ERROR"
+
+
 def test_text_renderer_is_compact() -> None:
     report = analyse_codex_records(
         [], runtime_version="codex-cli 9.9.9", duration_ms=1, artifact_ok=False

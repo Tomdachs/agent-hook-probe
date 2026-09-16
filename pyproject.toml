@@ -4,13 +4,13 @@ build-backend = "hatchling.build"
 
 [project]
 name = "agent-hook-probe"
-version = "0.1.0"
+version = "0.2.0"
 description = "Verify that coding-agent lifecycle hooks actually fire."
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
 authors = [{ name = "Tomdachs" }]
-keywords = ["codex", "hooks", "coding-agent", "testing", "developer-tools"]
+keywords = ["codex", "antigravity", "hooks", "coding-agent", "testing", "developer-tools"]
 classifiers = [
   "Development Status :: 3 - Alpha",
   "Environment :: Console",

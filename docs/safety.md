@@ -4,16 +4,22 @@ The purpose of Agent Hook Probe is to verify an automation boundary without weak
 
 ## Disposable ownership
 
-Every fixture file written by the Codex adapter lives in a newly created temporary repository. Hook definitions are passed as per-invocation session config rather than written into the user's Codex home or repository. The only requested shell side effect is a canary file in that repository. The fixture is removed after analysis unless `--keep-fixture` is supplied.
+Every provider fixture lives in a newly created temporary Git repository and contains only probe-owned hook configuration, recorder output, and canary content. It is removed after analysis unless `--keep-fixture` is supplied.
 
-## Hook trust versus sandbox bypass
+Codex hook definitions are passed as per-invocation session config rather than written into the user's Codex home or repository. Antigravity hook definitions are written only to the disposable repository's `.agents/hooks.json`; the probe never edits the user's `~/.gemini/antigravity-cli/settings.json` or `~/.gemini/config/hooks.json`.
 
-Codex requires non-managed hooks to be reviewed and trusted. Its official hook documentation provides `--dangerously-bypass-hook-trust` for one-off automation that already vets the hook source. The probe qualifies narrowly because it generates the complete hook definition itself immediately before launching Codex.
+## Provider permission boundaries
 
-This flag does not grant filesystem or network access to the model-generated command. The probe continues to select Codex `workspace-write` mode and never passes `--dangerously-bypass-approvals-and-sandbox`.
+Codex requires non-managed hooks to be reviewed and trusted. Its official hook documentation provides `--dangerously-bypass-hook-trust` for one-off automation that already vets the hook source. The probe uses that flag only for the complete hook definition it generated immediately before launch. It never passes `--dangerously-bypass-approvals-and-sandbox`, and the canary command stays inside `workspace-write`.
+
+The Antigravity adapter uses a read-only `view_file` canary. During the 1.2.4 release smoke, a `write_file` request was soft-denied in headless mode even after the disposable directory was explicitly added to the workspace, so the probe does not depend on write permission. It passes `--add-dir` for only the temporary fixture, enables `--sandbox`, and never passes `--dangerously-skip-permissions`.
+
+## Authentication
+
+Agent Hook Probe does not read, copy, migrate, print, or persist provider credentials. Providers must already be authenticated according to their own supported flow. Missing authentication is reported as setup error code `2`, not as a hook conformance failure.
 
 ## Sensitive data
 
-Raw hook payloads can contain working paths, the probe prompt, shell input, session ids, and transcript paths. They remain inside the disposable fixture and are not copied to text or JSON reports. A retained fixture is therefore debugging material, not a support-safe report.
+Raw hook payloads can contain working paths, the probe prompt, tool arguments, session or conversation ids, and transcript paths. They remain inside the disposable fixture and are not copied to text or JSON reports. A retained fixture is therefore debugging material, not a support-safe report.
 
-The probe does not read auth files, environment secrets, browser state, SSH material, or existing project content.
+The probe does not inspect auth files, environment secret values, browser state, SSH material, or existing project content.

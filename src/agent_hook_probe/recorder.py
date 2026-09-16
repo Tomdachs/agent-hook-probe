@@ -36,9 +36,16 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument("--event", required=True)
     parser.add_argument("--output-dir", required=True, type=Path)
+    parser.add_argument("--protocol", choices=("generic", "antigravity"), default="generic")
     args = parser.parse_args(argv)
     record(args.event, args.output_dir, sys.stdin.read())
-    sys.stdout.write("{}\n")
+    if args.protocol == "antigravity" and args.event == "PreToolUse":
+        response = {"decision": "allow"}
+    elif args.protocol == "antigravity" and args.event == "Stop":
+        response = {"decision": "stop"}
+    else:
+        response = {}
+    sys.stdout.write(json.dumps(response, separators=(",", ":")) + "\n")
     return 0
 
 

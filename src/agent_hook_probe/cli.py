@@ -5,6 +5,7 @@ import json
 import sys
 
 from . import __version__
+from .antigravity import AntigravityProbeSetupError, probe_antigravity
 from .codex import ProbeSetupError, probe_codex
 from .model import ProbeReport
 
@@ -46,6 +47,25 @@ def build_parser() -> argparse.ArgumentParser:
         help="keep raw disposable hook records",
     )
     codex.add_argument("--codex", dest="codex_executable", help="path to a Codex CLI executable")
+
+    antigravity = subparsers.add_parser(
+        "antigravity", help="probe Antigravity CLI hooks with a disposable fixture"
+    )
+    antigravity.add_argument(
+        "--json", action="store_true", help="emit a privacy-minimized JSON report"
+    )
+    antigravity.add_argument("--model", help="override the model used for the minimal probe turn")
+    antigravity.add_argument(
+        "--timeout", type=int, default=180, help="Antigravity turn timeout in seconds"
+    )
+    antigravity.add_argument(
+        "--keep-fixture",
+        action="store_true",
+        help="keep raw disposable hook records",
+    )
+    antigravity.add_argument(
+        "--agy", dest="agy_executable", help="path to an Antigravity CLI executable"
+    )
     return parser
 
 
@@ -60,19 +80,27 @@ def _error(message: str, json_output: bool) -> int:
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
-    if args.provider != "codex":
+    if args.provider not in {"codex", "antigravity"}:
         parser.print_help()
         return 2
     if args.timeout < 1:
         return _error("--timeout must be at least 1 second", args.json)
     try:
-        report = probe_codex(
-            codex_executable=args.codex_executable,
-            model=args.model,
-            timeout=args.timeout,
-            keep_fixture=args.keep_fixture,
-        )
-    except ProbeSetupError as exc:
+        if args.provider == "codex":
+            report = probe_codex(
+                codex_executable=args.codex_executable,
+                model=args.model,
+                timeout=args.timeout,
+                keep_fixture=args.keep_fixture,
+            )
+        else:
+            report = probe_antigravity(
+                agy_executable=args.agy_executable,
+                model=args.model,
+                timeout=args.timeout,
+                keep_fixture=args.keep_fixture,
+            )
+    except (ProbeSetupError, AntigravityProbeSetupError) as exc:
         return _error(str(exc), args.json)
     if args.json:
         print(json.dumps(report.to_dict(), indent=2))
