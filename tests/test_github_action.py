@@ -37,7 +37,7 @@ def test_codex_probe_command_is_argument_safe() -> None:
             AHP_JSON="true",
         )
     )
-    assert command[:5] == ["uvx", "--from", "/action", "agent-hook-probe", "codex"]
+    assert command[:5] == ["uvx", "--from", str(Path("/action")), "agent-hook-probe", "codex"]
     assert command[command.index("--surface") + 1] == "exec"
     assert command[command.index("--model") + 1] == "example model"
     assert command[command.index("--baseline") + 1] == "snapshots/base file.json"
@@ -68,7 +68,7 @@ def test_diff_command_does_not_include_provider_options() -> None:
     assert command == [
         "uvx",
         "--from",
-        "/action",
+        str(Path("/action")),
         "agent-hook-probe",
         "diff",
         "baseline.json",

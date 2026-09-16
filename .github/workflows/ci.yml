@@ -52,8 +52,12 @@ jobs:
           /tmp/ahp-wheel/bin/agent-hook-probe --version
 
   action-smoke:
-    name: Composite action / offline diff
-    runs-on: ubuntu-latest
+    name: Composite action / offline diff / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
       - uses: actions/checkout@v7
       - name: Unchanged snapshot passes
