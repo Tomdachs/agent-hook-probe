@@ -22,11 +22,26 @@ jobs:
       - run: uv run ruff format --check .
       - run: uv run pytest
       - name: Verify composite action unchanged path
+        id: release-unchanged
         uses: ./
         with:
           operation: diff
           baseline: tests/fixtures/action/baseline.json
           current: tests/fixtures/action/current.json
+      - name: Assert composite action outputs
+        env:
+          AHP_STATUS: ${{ steps.release-unchanged.outputs.status }}
+          AHP_PROVIDER: ${{ steps.release-unchanged.outputs.provider }}
+          AHP_MODE: ${{ steps.release-unchanged.outputs.mode }}
+          AHP_RUNTIME: ${{ steps.release-unchanged.outputs.runtime_version }}
+          AHP_CHANGES: ${{ steps.release-unchanged.outputs.changes }}
+        shell: bash
+        run: |
+          test "$AHP_STATUS" = "UNCHANGED"
+          test "$AHP_PROVIDER" = "codex"
+          test "$AHP_MODE" = "exec"
+          test "$AHP_RUNTIME" = "codex-cli 0.154.0"
+          test "$AHP_CHANGES" = "0"
       - name: Verify composite action regression path
         id: release-regression
         continue-on-error: true

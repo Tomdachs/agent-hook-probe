@@ -44,6 +44,23 @@ inputs:
     required: false
     default: "false"
 
+outputs:
+  status:
+    description: "PASS/FAIL for a probe, or UNCHANGED/IMPROVED/DRIFT/REGRESSION for a diff"
+    value: ${{ steps.probe.outputs.status }}
+  provider:
+    description: "Provider represented by the probe or compared snapshots"
+    value: ${{ steps.probe.outputs.provider }}
+  mode:
+    description: "Execution surface represented by the result"
+    value: ${{ steps.probe.outputs.mode }}
+  runtime_version:
+    description: "Current provider runtime version when available"
+    value: ${{ steps.probe.outputs.runtime_version }}
+  changes:
+    description: "Number of classified snapshot changes"
+    value: ${{ steps.probe.outputs.changes }}
+
 runs:
   using: composite
   steps:
@@ -53,6 +70,7 @@ runs:
         version: '0.12.5'
         enable-cache: true
     - name: Run Agent Hook Probe
+      id: probe
       shell: bash
       env:
         AHP_ACTION_PATH: ${{ github.action_path }}

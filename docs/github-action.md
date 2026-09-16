@@ -7,7 +7,7 @@ Agent Hook Probe ships a composite GitHub Action so repositories can gate on sav
 Offline `diff` is the safest default for ordinary pull-request CI because it does not launch a provider, consume model usage, or require credentials.
 
 ```yaml
-- uses: Tomdachs/agent-hook-probe@v0.5.0
+- uses: Tomdachs/agent-hook-probe@v0.5.1
   with:
     operation: diff
     baseline: .github/agent-hook-probe/codex-exec-baseline.json
@@ -16,12 +16,29 @@ Offline `diff` is the safest default for ordinary pull-request CI because it doe
 
 The step succeeds for `UNCHANGED` or `IMPROVED`, fails for `REGRESSION` or `DRIFT`, and returns a setup failure for invalid or incompatible snapshots.
 
+## Outputs and Job Summary
+
+Every successful parse publishes five Action outputs: `status`, `provider`, `mode`, `runtime_version`, and `changes`. The same privacy-minimized metadata is appended to the GitHub Job Summary. Regression comparisons also include their normalized change rows in the summary.
+
+```yaml
+- id: hook-contract
+  uses: Tomdachs/agent-hook-probe@v0.5.1
+  with:
+    operation: diff
+    baseline: .github/agent-hook-probe/codex-exec-baseline.json
+    current: artifacts/codex-exec-current.json
+
+- run: echo "Hook status: ${{ steps.hook-contract.outputs.status }}"
+```
+
+`changes` is the number of classified snapshot changes. For live probe mode it is `0` unless a baseline comparison is requested. The outputs contain only normalized report metadata; raw hook payloads are never written to `$GITHUB_OUTPUT` or the Job Summary.
+
 ## Live probe
 
 Live mode deliberately does not install, upgrade, or authenticate a provider CLI. Pin and prepare the provider in earlier workflow steps or use a pre-authenticated self-hosted runner, then invoke the action:
 
 ```yaml
-- uses: Tomdachs/agent-hook-probe@v0.5.0
+- uses: Tomdachs/agent-hook-probe@v0.5.1
   with:
     operation: probe
     provider: codex

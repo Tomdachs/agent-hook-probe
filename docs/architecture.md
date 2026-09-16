@@ -64,3 +64,5 @@ The diff engine keys checks by stable check name. Runtime-version changes are me
 The composite action is a thin transport layer over the same CLI. It pins `setup-uv`, validates Action inputs in a standard-library Python helper, and invokes the package from the checked-out action source with `uvx --from`. It does not duplicate provider contracts or diff logic.
 
 Offline `diff` never invokes a provider. Live `probe` expects the caller to have selected, installed, and authenticated the provider CLI before the Action step. Action inputs are converted to a subprocess argument array without `eval` or shell command construction.
+
+The helper requests the CLI's privacy-minimized JSON form internally, derives the Action outputs from that normalized result, and renders console text when `json: false`. Only status/provider/mode/runtime/change-count metadata is written to `$GITHUB_OUTPUT`; the Job Summary is built from the same normalized report and comparison fields.

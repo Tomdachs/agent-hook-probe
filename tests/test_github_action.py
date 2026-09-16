@@ -12,6 +12,9 @@ MODULE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(MODULE)
 ActionInputError = MODULE.ActionInputError
 build_command = MODULE.build_command
+metadata_from_payload = MODULE.metadata_from_payload
+publish_github_metadata = MODULE.publish_github_metadata
+render_text = MODULE.render_text
 
 
 def base_env(**overrides: str) -> dict[str, str]:
@@ -106,3 +109,83 @@ def test_overwrite_requires_snapshot_path() -> None:
 def test_action_path_is_required() -> None:
     with pytest.raises(ActionInputError, match="AHP_ACTION_PATH is required"):
         build_command(base_env(AHP_ACTION_PATH=""))
+
+
+def test_action_always_requests_privacy_minimized_json_internally() -> None:
+    command = build_command(base_env())
+    assert command[-1] == "--json"
+
+
+def test_diff_metadata_exposes_ci_outputs() -> None:
+    payload = {
+        "provider": "codex",
+        "mode": "exec",
+        "baseline_runtime_version": "codex-cli 0.154.0",
+        "current_runtime_version": "codex-cli 0.155.0",
+        "runtime_changed": True,
+        "status": "REGRESSION",
+        "changes": [
+            {
+                "name": "Stop",
+                "kind": "regressed",
+                "baseline": "PASS",
+                "current": "FAIL",
+            }
+        ],
+    }
+    metadata = metadata_from_payload(payload)
+    assert metadata == {
+        "status": "REGRESSION",
+        "provider": "codex",
+        "mode": "exec",
+        "runtime_version": "codex-cli 0.155.0",
+        "changes": "1",
+    }
+    assert "Status:   REGRESSION" in render_text(payload)
+
+
+def test_probe_metadata_exposes_runtime() -> None:
+    payload = {
+        "probe_version": "0.5.1",
+        "provider": "antigravity",
+        "runtime_version": "1.2.4",
+        "mode": "headless",
+        "checks": [],
+        "result": "PASS",
+    }
+    metadata = metadata_from_payload(payload)
+    assert metadata["status"] == "PASS"
+    assert metadata["provider"] == "antigravity"
+    assert metadata["runtime_version"] == "1.2.4"
+
+
+def test_publish_github_metadata_writes_outputs_and_summary(tmp_path: Path) -> None:
+    output = tmp_path / "output.txt"
+    summary = tmp_path / "summary.md"
+    payload = {
+        "provider": "codex",
+        "mode": "exec",
+        "baseline_runtime_version": "codex-cli 0.154.0",
+        "current_runtime_version": "codex-cli 0.155.0",
+        "status": "REGRESSION",
+        "changes": [
+            {
+                "name": "Stop",
+                "kind": "regressed",
+                "baseline": "PASS",
+                "current": "FAIL",
+            }
+        ],
+    }
+    publish_github_metadata(
+        payload,
+        {"GITHUB_OUTPUT": str(output), "GITHUB_STEP_SUMMARY": str(summary)},
+    )
+    output_text = output.read_text(encoding="utf-8")
+    summary_text = summary.read_text(encoding="utf-8")
+    assert "status=REGRESSION" in output_text
+    assert "runtime_version=codex-cli 0.155.0" in output_text
+    assert "changes=1" in output_text
+    assert "### Agent Hook Probe" in summary_text
+    assert "| status | REGRESSION |" in summary_text
+    assert "| regressed | Stop | PASS | FAIL |" in summary_text

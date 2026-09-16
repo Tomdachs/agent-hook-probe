@@ -43,9 +43,16 @@ Agent Hook Probe should grow by adding evidence-backed lifecycle contracts, not 
 - CI self-tests the action for both unchanged and regression snapshots.
 - Raw fixture retention is intentionally not exposed by the Action.
 
+## v0.5.1 — released
+
+- Composite Action outputs for status, provider, execution mode, runtime version, and change count.
+- Privacy-minimized GitHub Job Summary for probe and diff runs.
+- Cross-platform CI asserts the Action output contract on Linux, Windows, and macOS.
+- Release workflow self-tests the output contract before publishing artifacts.
+
 ## Next candidates
 
-- Claude Code adapter after defining a similarly isolated, deterministic fixture.
+- Claude Code adapter is implemented on `feat/claude-adapter`, but its full live release gate is parked until an eligible Claude Code authentication environment is available.
 
 ## Out of scope
 

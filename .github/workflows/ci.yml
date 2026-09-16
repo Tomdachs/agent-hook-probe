@@ -61,11 +61,26 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Unchanged snapshot passes
+        id: unchanged
         uses: ./
         with:
           operation: diff
           baseline: tests/fixtures/action/baseline.json
           current: tests/fixtures/action/current.json
+      - name: Assert action outputs
+        env:
+          AHP_STATUS: ${{ steps.unchanged.outputs.status }}
+          AHP_PROVIDER: ${{ steps.unchanged.outputs.provider }}
+          AHP_MODE: ${{ steps.unchanged.outputs.mode }}
+          AHP_RUNTIME: ${{ steps.unchanged.outputs.runtime_version }}
+          AHP_CHANGES: ${{ steps.unchanged.outputs.changes }}
+        shell: bash
+        run: |
+          test "$AHP_STATUS" = "UNCHANGED"
+          test "$AHP_PROVIDER" = "codex"
+          test "$AHP_MODE" = "exec"
+          test "$AHP_RUNTIME" = "codex-cli 0.154.0"
+          test "$AHP_CHANGES" = "0"
       - name: Regression snapshot fails
         id: regression
         continue-on-error: true

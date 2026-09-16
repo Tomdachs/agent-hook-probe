@@ -41,3 +41,5 @@ Snapshot output is written only when the user supplies `--save-snapshot`. Existi
 The GitHub Action has no credential inputs and does not install or authenticate provider CLIs. Authentication is intentionally left to an earlier caller-controlled step or a pre-authenticated runner. This prevents the Action from becoming a generic secret-transport layer.
 
 The Action does not expose `--keep-fixture`; only privacy-minimized snapshots can be written through its inputs. Snapshot upload is also caller-controlled rather than automatic. The helper validates enumerated and boolean inputs, then launches Agent Hook Probe with an argument array rather than shell evaluation.
+
+Action outputs and the GitHub Job Summary are derived only from the privacy-minimized CLI report. They include normalized status/provider/mode/runtime/change metadata and optional normalized regression rows; raw hook payloads, prompts, fixture paths, credentials, and provider stdout/stderr are never copied into those GitHub metadata channels.

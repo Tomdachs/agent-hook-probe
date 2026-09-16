@@ -22,25 +22,25 @@ The Codex TUI probe is currently supported on Linux, WSL, and macOS. Windows can
 Python 3.11+, Git, the target provider CLI, and an authenticated provider session are required. Each probe performs one minimal model turn, so normal provider usage applies.
 
 ```bash
-uvx --from https://github.com/Tomdachs/agent-hook-probe/releases/download/v0.5.0/agent_hook_probe-0.5.0-py3-none-any.whl agent-hook-probe codex
+uvx --from https://github.com/Tomdachs/agent-hook-probe/releases/download/v0.5.1/agent_hook_probe-0.5.1-py3-none-any.whl agent-hook-probe codex
 ```
 
 Probe the interactive Codex TUI instead of `exec`:
 
 ```bash
-uvx --from https://github.com/Tomdachs/agent-hook-probe/releases/download/v0.5.0/agent_hook_probe-0.5.0-py3-none-any.whl agent-hook-probe codex --surface tui
+uvx --from https://github.com/Tomdachs/agent-hook-probe/releases/download/v0.5.1/agent_hook_probe-0.5.1-py3-none-any.whl agent-hook-probe codex --surface tui
 ```
 
 Probe Antigravity with the same release wheel:
 
 ```bash
-uvx --from https://github.com/Tomdachs/agent-hook-probe/releases/download/v0.5.0/agent_hook_probe-0.5.0-py3-none-any.whl agent-hook-probe antigravity
+uvx --from https://github.com/Tomdachs/agent-hook-probe/releases/download/v0.5.1/agent_hook_probe-0.5.1-py3-none-any.whl agent-hook-probe antigravity
 ```
 
 Typical Codex result:
 
 ```text
-Agent Hook Probe 0.5.0
+Agent Hook Probe 0.5.1
 Runtime: codex-cli 0.154.0
 Mode:    tui
 
@@ -94,14 +94,16 @@ Snapshot files contain the normalized public report plus capture time. They neve
 Use the bundled composite action for an offline regression gate without provider credentials or model usage:
 
 ```yaml
-- uses: Tomdachs/agent-hook-probe@v0.5.0
+- uses: Tomdachs/agent-hook-probe@v0.5.1
   with:
     operation: diff
     baseline: .github/agent-hook-probe/codex-exec-baseline.json
     current: artifacts/codex-exec-current.json
 ```
 
-Live `operation: probe` is also supported, but the action deliberately does not install, upgrade, or authenticate Codex or Antigravity. Prepare a pinned provider CLI and supported authentication in earlier workflow steps or use a pre-authenticated runner. See [docs/github-action.md](docs/github-action.md).
+Live `operation: probe` is also supported, but the action deliberately does not install, upgrade, or authenticate Codex or Antigravity. Prepare a pinned provider CLI and supported authentication in earlier workflow steps or use a pre-authenticated runner.
+
+The action publishes `status`, `provider`, `mode`, `runtime_version`, and `changes` outputs and writes the normalized result to the GitHub Job Summary, so downstream steps can branch on the conformance result without parsing console text. See [docs/github-action.md](docs/github-action.md).
 
 ## Antigravity adapter
 
