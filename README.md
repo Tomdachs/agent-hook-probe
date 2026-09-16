@@ -1,6 +1,6 @@
 # Agent Hook Probe
 
-[![CI](https://github.com/Tomdachs/agent-hook-probe/actions/workflows/ci.yml/badge.svg)](https://github.com/Tomdachs/agent-hook-probe/actions/workflows/ci.yml) [![Release](https://img.shields.io/github/v/release/Tomdachs/agent-hook-probe)](https://github.com/Tomdachs/agent-hook-probe/releases/latest) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![CI](https://github.com/Tomdachs/agent-hook-probe/actions/workflows/ci.yml/badge.svg)](https://github.com/Tomdachs/agent-hook-probe/actions/workflows/ci.yml) [![Release](https://img.shields.io/github/v/release/Tomdachs/agent-hook-probe)](https://github.com/Tomdachs/agent-hook-probe/releases/latest) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE) [![GitHub Marketplace](https://img.shields.io/badge/GitHub%20Marketplace-Agent%20Hook%20Probe-blue?logo=github)](https://github.com/marketplace/actions/agent-hook-probe)
 
 **Verify that your coding-agent hooks actually fire.**
 
@@ -91,7 +91,7 @@ Snapshot files contain the normalized public report plus capture time. They neve
 
 ## GitHub Action
 
-Use the bundled composite action for an offline regression gate without provider credentials or model usage:
+Agent Hook Probe is published on [GitHub Marketplace](https://github.com/marketplace/actions/agent-hook-probe). Use the bundled composite action for an offline regression gate without provider credentials or model usage:
 
 ```yaml
 - uses: Tomdachs/agent-hook-probe@v0.5

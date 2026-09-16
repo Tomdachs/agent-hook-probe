@@ -1,6 +1,6 @@
 # GitHub Action
 
-Agent Hook Probe ships a composite GitHub Action so repositories can gate on saved hook-contract snapshots or run a live provider probe on an already prepared runner.
+Agent Hook Probe ships a composite GitHub Action so repositories can gate on saved hook-contract snapshots or run a live provider probe on an already prepared runner. It is published as [Agent Hook Probe on GitHub Marketplace](https://github.com/marketplace/actions/agent-hook-probe).
 
 ## Offline regression gate
 
