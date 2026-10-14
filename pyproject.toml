@@ -34,7 +34,7 @@ Issues = "https://github.com/Tomdachs/agent-hook-probe/issues"
 agent-hook-probe = "agent_hook_probe.cli:main"
 
 [dependency-groups]
-dev = ["pytest>=8.4,<10", "ruff>=0.13,<0.17"]
+dev = ["pytest>=8.4,<10", "ruff>=0.13,<0.18"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/agent_hook_probe"]
